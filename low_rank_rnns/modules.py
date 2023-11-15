@@ -423,7 +423,7 @@ class LowRankRNN(nn.Module):
     parametrized by two Nxr matrices m and n such that the connectivity is m * n^T
     """
 
-    def __init__(self, input_size, hidden_size, output_size, noise_std, alpha, rank=1,
+    def __init__(self, input_size, hidden_size, output_size, noise_std, alpha, rank=1, train_m = True,
                  train_wi=False, train_wo=False, train_wrec=True, train_h0=False, train_si=True, train_so=True,
                  wi_init=None, wo_init=None, m_init=None, n_init=None, si_init=None, so_init=None, h0_init=None,
                  add_biases=False, non_linearity=torch.tanh, output_non_linearity=torch.tanh):
@@ -455,6 +455,7 @@ class LowRankRNN(nn.Module):
         self.noise_std = noise_std
         self.alpha = alpha
         self.rank = rank
+        self.train_m = train_m
         self.train_wi = train_wi
         self.train_wo = train_wo
         self.train_wrec = train_wrec
@@ -467,6 +468,7 @@ class LowRankRNN(nn.Module):
         # Define parameters
         self.wi = nn.Parameter(torch.Tensor(input_size, hidden_size))
         self.si = nn.Parameter(torch.Tensor(input_size))
+
         if train_wi:
             self.si.requires_grad = False
         else:
@@ -475,6 +477,10 @@ class LowRankRNN(nn.Module):
             self.si.requires_grad = False
         self.m = nn.Parameter(torch.Tensor(hidden_size, rank))
         self.n = nn.Parameter(torch.Tensor(hidden_size, rank))
+
+        if not train_m:
+            self.m.requires_grad = False
+            
         if not train_wrec:
             self.m.requires_grad = False
             self.n.requires_grad = False
@@ -570,7 +576,7 @@ class LowRankRNN(nn.Module):
 
     def clone(self):
         new_net = LowRankRNN(self.input_size, self.hidden_size, self.output_size, self.noise_std, self.alpha,
-                             self.rank, self.train_wi, self.train_wo, self.train_wrec, self.train_h0, self.train_si,
+                             self.rank, self.train_m, self.train_wi, self.train_wo, self.train_wrec, self.train_h0, self.train_si,
                              self.train_so, self.wi, self.wo, self.m, self.n, self.si, self.so, self.h0, False,
                              self.non_linearity, self.output_non_linearity)
         new_net._define_proxy_parameters()
@@ -985,7 +991,7 @@ class SupportLowRankRNN_withMask(nn.Module):
 
 class OptimizedLowRankRNN(nn.Module):
 
-    def __init__(self, input_size, hidden_size, output_size, noise_std, alpha, rho=0., rank=1,
+    def __init__(self, input_size, hidden_size, output_size, noise_std, alpha, rho=0., rank=1, 
                  train_wi=False, train_wo=False, train_wrec=True, train_h0=False, train_si=True, train_so=True,
                  wi_init=None, wo_init=None, m_init=None, n_init=None, si_init=None, so_init=None, h0_init=None):
         """
