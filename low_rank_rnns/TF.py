@@ -118,7 +118,8 @@ def generate_checker_data(num_trials, coherences=None, std=std_default, fraction
     elif fraction_validation_trials == 0.:
         return inputs_train, targets_train, mask_train
 
-def generate_interrupt_inputs(num_trials, interrupt_type = 'targets', interrput_time = None):
+
+def generate_interrupt_inputs(num_trials, interrupt_type = 'targets'):
 
 
     # inputs_sensory: coh of checkerboard
@@ -132,8 +133,7 @@ def generate_interrupt_inputs(num_trials, interrupt_type = 'targets', interrput_
 
     if interrupt_type == 'targets':
         # targets turn on and off
-        if interrupt_time is None:
-            interrupt_time = [200, 400, 600, 800]
+        interrupt_time = [200, 400, 600, 800]
 
         for i in range(num_trials):
             off_time_each = interrupt_time[random.randint(0, len(interrupt_time)-1)]
@@ -162,6 +162,7 @@ def generate_interrupt_inputs(num_trials, interrupt_type = 'targets', interrput_
             inputs[i, targets_begin:(targets_begin + off_time_each/deltaT), 1] = coh_color. * SCALE_CTX
 
     return inputs, off_time, allCoh
+
 
 
 def generate_ordered_inputs(trial_repets=1):
