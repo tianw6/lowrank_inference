@@ -123,13 +123,13 @@ def generate_interrupt_inputs(num_trials, interrupt_type = 'targets'):
 
 
     # inputs_sensory: coh of checkerboard
-    inputs_sensory = std * torch.randn((num_trials, total_duration, 1), dtype=torch.float32)
+    inputs_sensory = std_default * torch.randn((num_trials, total_duration, 1), dtype=torch.float32)
     # inputs_context: targets configuration
     inputs_context = torch.zeros((num_trials, total_duration, 2))    
     inputs = torch.cat([inputs_sensory, inputs_context], dim=2)
-    off_time = torch.zeros((num_trials, total_duration, 1), dtype=torch.float32)
+    off_time = torch.zeros((num_trials), dtype=torch.float32)
     allCoh = np.zeros((num_trials))
-
+    allContext = np.zeros((num_trials))
 
     if interrupt_type == 'targets':
         # targets turn on and off
@@ -140,15 +140,16 @@ def generate_interrupt_inputs(num_trials, interrupt_type = 'targets'):
             off_time[i] = off_time_each
 
             context = random.randint(1, 2)
+            allContext[i] = context
             if context == 1:
-                inputs[i, targets_begin:(targets_begin + off_time_each/deltaT), 0] = 1. * SCALE_CTX
+                inputs[i, targets_begin:(targets_begin + int(off_time_each/deltaT)), 0] = 1. * SCALE_CTX
 
             elif context == 2:
-                inputs[i, targets_begin:(targets_begin + off_time_each/deltaT), 0] = -1. * SCALE_CTX
+                inputs[i, targets_begin:(targets_begin + int(off_time_each/deltaT)), 0] = -1. * SCALE_CTX
 
 
 
-    if interrupt_type = 'checkerboard': 
+    if interrupt_type == 'checkerboard': 
         # checkerboard turn on and off
         coherences = [-0.9, -0.6, -0.4, -0.2, 0.2, 0.4, 0.6, 0.9]
 
@@ -159,9 +160,9 @@ def generate_interrupt_inputs(num_trials, interrupt_type = 'targets'):
 
             coh_color = coherences[random.randint(0, len(coherences)-1)]
             allCoh[i] = coh_color
-            inputs[i, targets_begin:(targets_begin + off_time_each/deltaT), 1] = coh_color. * SCALE_CTX
+            inputs[i, targets_begin:(targets_begin + int(off_time_each/deltaT)), 1] = coh_color * SCALE_CTX
 
-    return inputs, off_time, allCoh
+    return inputs, off_time, allCoh, allContext
 
 
 
