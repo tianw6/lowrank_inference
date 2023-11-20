@@ -148,10 +148,10 @@ def generate_interrupt_inputs(num_trials, interrupt_type = 'targets'):
             context = random.randint(1, 2)
             allContext[i] = context
             if context == 1:
-                inputs[i, targets_begin:(targets_begin + int(off_time_each/deltaT)), 0] = 1. * SCALE_CTX
+                inputs[i, targets_begin:(targets_begin + int(off_time_each/deltaT)), 1] = 1. * SCALE_CTX
 
             elif context == 2:
-                inputs[i, targets_begin:(targets_begin + int(off_time_each/deltaT)), 0] = -1. * SCALE_CTX
+                inputs[i, targets_begin:(targets_begin + int(off_time_each/deltaT)), 2] = 1. * SCALE_CTX
 
 
 
@@ -166,7 +166,7 @@ def generate_interrupt_inputs(num_trials, interrupt_type = 'targets'):
 
             coh_color = coherences[random.randint(0, len(coherences)-1)]
             allCoh[i] = coh_color
-            inputs[i, targets_begin:(targets_begin + int(off_time_each/deltaT)), 1] = coh_color * SCALE_CTX
+            inputs[i, targets_begin:(targets_begin + int(off_time_each/deltaT)), 0] = coh_color * SCALE_CTX
 
     return inputs, off_time, allCoh, allContext
 
