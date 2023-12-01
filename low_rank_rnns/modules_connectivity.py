@@ -101,14 +101,21 @@ def train(net, _input, _target, _mask, n_epochs, lr=1e-2, batch_size=32, plot_le
             losses.append(loss.item())
             all_losses.append(loss.item())
             loss.backward()
+
+
+
+            ######################## Tian changed the mask_gradients 
             if mask_gradients:
-                net.m.grad = net.m.grad * net.m_mask
-                net.n.grad = net.n.grad * net.n_mask
+                # net.m.grad = net.m.grad * net.m_mask
+                # net.n.grad = net.n.grad * net.n_mask
+                net.wrec.grad = net.wrec.grad * net.wrec_mask
                 net.wi.grad = net.wi.grad * net.wi_mask
                 net.wo.grad = net.wo.grad * net.wo_mask
-                net.unitn.grad = net.unitn.grad * net.unitn_mask
-                net.unitm.grad = net.unitm.grad * net.unitm_mask
-                net.unitwi.grad = net.unitwi.grad * net.unitwi_mask
+                # net.unitn.grad = net.unitn.grad * net.unitn_mask
+                # net.unitm.grad = net.unitm.grad * net.unitm_mask
+                # net.unitwi.grad = net.unitwi.grad * net.unitwi_mask
+            ################################
+
             if clip_gradient is not None:
                 torch.nn.utils.clip_grad_norm_(net.parameters(), clip_gradient)
             if plot_gradient:
@@ -186,6 +193,10 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
         self.non_linearity = non_linearity
         self.output_non_linearity = output_non_linearity
 
+        self.wi_mask = nn.Parameter(torch.Tensor(input_size, hidden_size), requires_grad=False)
+        self.wo_mask = nn.Parameter(torch.Tensor(hidden_size, output_size), requires_grad=False)
+        self.wrec_mask = nn.Parameter(torch.Tensor(hidden_size, hidden_size), requires_grad=False)
+
         # Define parameters
         self.wi = nn.Parameter(torch.Tensor(input_size, hidden_size))
         self.si = nn.Parameter(torch.Tensor(input_size))
@@ -213,24 +224,6 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
         if not train_h0:
             self.h0.requires_grad = False
 
-        ############### define masks
-        if wrec_mask is not None:
-            self.wrec_mask = wrec_mask
-        else:
-            self.wrec_mask = torch.ones(hidden_size, hidden_size)
-
-
-        if wi_mask is not None:
-            self.wi_mask = wi_mask  
-        else:
-            self.wi_mask = torch.ones(input_size, hidden_size)
-
-        if wo_mask is not None:
-            self.wo_mask = wo_mask
-        else: 
-            self.wo_mask = torch.ones(hidden_size, output_size)          
-        ###############
-
 
         # Initialize parameters
         with torch.no_grad():
@@ -252,6 +245,7 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
                 self.b.copy_(b_init)
             if wo_init is None:
                 self.wo.normal_(std=1 / hidden_size)
+
             else:
                 self.wo.copy_(wo_init)
             if so_init is None:
@@ -259,22 +253,36 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
             else:
                 self.so.copy_(so_init)
             self.h0.zero_()
+
+
+
+            ############### define masks
+            if wrec_mask is not None:
+                self.wrec_mask.copy_(wrec_mask)
+                temp = torch.normal(0,1,size = (hidden_size,hidden_size))
+                # self.wrec.copy_(temp*wrec_mask)
+
+            else:
+                self.wrec_mask.set_(torch.ones_like(self.wrec_mask))
+
+            if wi_mask is not None:
+                self.wi_mask.copy_(wi_mask)  
+                temp = torch.normal(0,1,size = (input_size,hidden_size))
+                # self.wi.copy_(temp*wi_mask)                
+            else:
+                self.wi_mask.set_(torch.ones_like(self.wi_mask))
+
+            if wo_mask is not None:
+                self.wo_mask.copy_(wo_mask)
+                temp = torch.normal(0,1,size = (hidden_size, output_size))
+                # self.wo.copy_(temp*wo_mask)
+            else: 
+                self.wo_mask.set_(torch.ones_like(self.wo_mask))         
+            ###############
+
+
         self.wi_full, self.wo_full = [None] * 2
-
-
         self._define_proxy_parameters()
-
-
-        ####################### add masks
-        # if wrec_mask is not None:
-        #     self.wrec = self.wrec*self.wrec_mask
-
-        # if wi_mask is not None:
-        #     self.wi_full = self.wi_full*self.wi_mask  
-
-        # if wo_mask is not None:
-        #     self.wo_full = self.wo_full*self.wo_mask  
-        #######################
 
 
     def _define_proxy_parameters(self):
@@ -309,7 +317,7 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
 
             self.wrec = self.wrec
             h = h + self.noise_std * noise[:, i, :] + self.alpha * \
-                (-h + r.matmul((self.wrec.t()*self.wrec_mask)) + input[:, i, :].matmul((self.wi_full*self.wi_mask)))
+                (-h + r.matmul(self.wrec.t()*self.wrec_mask) + input[:, i, :].matmul(self.wi_full*self.wi_mask))
             r = self.non_linearity(h + self.b)
             output[:, i, :] = self.output_non_linearity(h) @ (self.wo_full*self.wo_mask)
 
@@ -463,7 +471,7 @@ class LowRankRNN(nn.Module):
     """
 
     def __init__(self, input_size, hidden_size, output_size, noise_std, alpha, rank=1, train_m = True,
-                 train_wi=False, train_wo=False, train_wrec=True, train_h0=False, train_si=True, train_so=True,
+                 train_wi=False, train_wo=False, train_wrec=True, train_h0=False, train_si=True, train_so=True, wi_mask = None, wo_mask = None,
                  wi_init=None, wo_init=None, m_init=None, n_init=None, si_init=None, so_init=None, h0_init=None,
                  add_biases=False, non_linearity=torch.tanh, output_non_linearity=torch.tanh):
         """
@@ -503,6 +511,10 @@ class LowRankRNN(nn.Module):
         self.train_so = train_so
         self.non_linearity = non_linearity
         self.output_non_linearity = output_non_linearity
+
+
+        self.wi_mask = nn.Parameter(torch.Tensor(input_size, hidden_size), requires_grad=False)
+        self.wo_mask = nn.Parameter(torch.Tensor(hidden_size, output_size), requires_grad=False)
 
         # Define parameters
         self.wi = nn.Parameter(torch.Tensor(input_size, hidden_size))
@@ -569,6 +581,26 @@ class LowRankRNN(nn.Module):
                 self.h0.zero_()
             else:
                 self.h0.copy_(h0_init)
+
+
+
+            ############### define masks
+            if wi_mask is not None:
+                self.wi_mask.copy_(wi_mask)  
+                temp = torch.normal(0,1,size = (input_size,hidden_size))
+                # self.wi.copy_(temp*wi_mask)                
+            else:
+                self.wi_mask.set_(torch.ones_like(self.wi_mask))
+
+            if wo_mask is not None:
+                self.wo_mask.copy_(wo_mask)
+                temp = torch.normal(0,1,size = (hidden_size, output_size))
+                # self.wo.copy_(temp*wo_mask)
+            else: 
+                self.wo_mask.set_(torch.ones_like(self.wo_mask))         
+            ###############        
+
+
         self.wrec, self.wi_full, self.wo_full = [None] * 3
         self._define_proxy_parameters()
 
@@ -602,9 +634,9 @@ class LowRankRNN(nn.Module):
         for i in range(seq_len):
             h = h + self.noise_std * noise[:, i, :] + self.alpha * \
                 (-h + r.matmul(self.n).matmul(self.m.t()) / self.hidden_size +
-                    input[:, i, :].matmul(self.wi_full))
+                    input[:, i, :].matmul(self.wi_full*self.wi_mask))
             r = self.non_linearity(h + self.b)
-            output[:, i, :] = self.output_non_linearity(h) @ self.wo_full / self.hidden_size
+            output[:, i, :] = self.output_non_linearity(h) @ (self.wo_full*self.wo_mask) / self.hidden_size
             if return_dynamics:
                 trajectories[:, i + 1, :] = h
 
