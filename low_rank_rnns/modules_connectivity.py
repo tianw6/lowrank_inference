@@ -648,7 +648,7 @@ class LowRankRNN(nn.Module):
     def clone(self):
         new_net = LowRankRNN(self.input_size, self.hidden_size, self.output_size, self.noise_std, self.alpha,
                              self.rank, self.train_m, self.train_wi, self.train_wo, self.train_wrec, self.train_h0, self.train_si,
-                             self.train_so, self.wi, self.wo, self.m, self.n, self.si, self.so, self.h0, False,
+                             self.train_so, self.wi_mask, self.wo_mask, self.wi, self.wo, self.m, self.n, self.si, self.so, self.h0, False,
                              self.non_linearity, self.output_non_linearity)
         new_net._define_proxy_parameters()
         return new_net
