@@ -12,8 +12,8 @@ import torch
 deltaT = 10.
 fixation_duration = 100
 targets_duration = 2000
-stimulus_duration = 500
-decision_duration = 500
+stimulus_duration = 1000
+decision_duration = 1000
 
 
 SCALE = 1
@@ -96,10 +96,12 @@ def generate_checker_data(num_trials, coherences=None, std=std_default, fraction
                 context = context_spec
             if context == 1:
                 inputs[i, targets_begin:, 1] = 1. * SCALE_CTX
+                inputs[i, targets_begin:, 2] = -1. * SCALE_CTX
 
                 targets[i, response_begin:] = lo if coh_color > 0 else hi
             elif context == 2:
                 inputs[i, targets_begin:, 2] = 1. * SCALE_CTX
+                inputs[i, targets_begin:, 1] = -1. * SCALE_CTX
 
                 targets[i, response_begin:] = hi if coh_color > 0 else lo
 

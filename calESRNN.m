@@ -6,7 +6,7 @@ stim2 = 160;
 bound = 2.58;
 
 
-load('~/code/lowrank_inference/notebooks/traj.mat');
+load('~/code/lowrank_inference/notebooks/trajVanilla.mat');
 
 cfdTraj = double(permute(cfdTraj, [1,3,2]));
 tfTraj = double(permute(tfTraj, [1,3,2]));
@@ -47,7 +47,7 @@ tfGL = tfTraj(tfDecision == -1& tfCoh < 0,:,:);
 tfGR = tfTraj(tfDecision == 1 & tfCoh < 0,:,:);
 
 
-for n = 100:11  0
+for n = 100:110
     figure; 
     subplot(1,2,1), hold on
     plot(mean(squeeze(cfdRL(:,n,:)),1),'r-')
@@ -67,6 +67,16 @@ end
 
 %% 
 
+% 
+% tfColES = tfColES(81:end,:);
+% cfdColES = cfdColES(81:end,:);
+% 
+% tfCxtES = tfCxtES(81:end,:);
+% cfdCxtES = cfdCxtES(81:end,:);
+% 
+% tfDirES = tfDirES(81:end,:);
+% cfdDirES = cfdDirES(81:end,:);
+
 figure; hold on
 plot(max(tfDirES,[],2), max(cfdDirES,[],2), 'k.', 'markersize', 5)
 title('dir')
@@ -77,13 +87,14 @@ xlim([0,4])
 figure; hold on
 plot(max(tfColES,[],2), max(cfdColES,[],2), 'k.', 'markersize', 5)
 title('col')
-ylim([0,40])
-xlim([0,40])
+ylim([0,10])
+xlim([0,10])
+
 
 figure; hold on
 plot(max(tfCxtES,[],2), max(cfdCxtES,[],2), 'k.', 'markersize', 5)
 title('cxt')
-ylim([0,35])
+ylim([0,5])
 xlim([0,35])
 
 

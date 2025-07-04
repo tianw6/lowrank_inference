@@ -122,6 +122,10 @@ def train(net, _input, _target, _mask, n_epochs, lr=1e-2, batch_size=32, plot_le
             output.detach_()
             if resample:
                 net.resample_basis()
+            print("batch %d:  loss=%.3f  (took %.2f s) *" % (i, loss, time.time() - begin))
+
+
+
         if keep_best and np.mean(losses) < best_loss:
             best = net.clone()
             best_loss = np.mean(losses)

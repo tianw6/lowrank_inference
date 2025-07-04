@@ -3,7 +3,7 @@ import torch.nn as nn
 from math import sqrt, floor
 import random
 import time
-
+import numpy as np
 
 def loss_mse(output, target, mask):
     """
@@ -14,7 +14,13 @@ def loss_mse(output, target, mask):
     :return: float
     """
     # Compute loss for each (trial, timestep) (average accross output dimensions)
-    loss_tensor = (mask * (target - output)).pow(2).mean(dim=-1)
+
+    ############################## Tian changed this
+    # loss_tensor = (mask * (target - output)).pow(2).mean(dim=-1)
+    loss_tensor = ((target - output)).pow(2).mean(dim=-1)
+    ##############################
+
+
     # Account for different number of masked values per trial
     loss_by_trial = loss_tensor.sum(dim=-1) / mask[:, :, 0].sum(dim=-1)
     return loss_by_trial.mean()
@@ -78,7 +84,7 @@ def train(net, _input, _target, _mask, n_epochs, lr=1e-2, batch_size=32, plot_le
 
     # Initialize setup to keep best network
     with torch.no_grad():
-        output = net(input, initial_states=initial_states)
+        output, h = net(input, initial_states=initial_states)
         initial_loss = loss_mse(output, target, mask)
         print("initial loss: %.3f" % (initial_loss.item()))
         if keep_best:
@@ -91,30 +97,40 @@ def train(net, _input, _target, _mask, n_epochs, lr=1e-2, batch_size=32, plot_le
         losses = []  # losses over the whole epoch
         for i in range(num_examples // batch_size):
             optimizer.zero_grad()
-            random_batch_idx = random.sample(range(num_examples), batch_size)
+
+
+
+            ############################# Tian changed this
+            # random_batch_idx = random.sample(range(num_examples), batch_size)
+
+            random_batch_idx = np.arange(batch_size*i, batch_size*(i + 1))
+
+            ##################################
+
             batch = input[random_batch_idx]
             if initial_states is not None:
-                output = net(batch, initial_states=initial_states[random_batch_idx])
+                output, h = net(batch, initial_states=initial_states[random_batch_idx])
             else:
-                output = net(batch)
+                output, h = net(batch)
+
+
+
+
+
             loss = loss_mse(output, target[random_batch_idx], mask[random_batch_idx])
+            
+
+            ################################## Tian changed this
+            # add L2 regularization 
+            w_rec_eff = torch.abs(net.wrec) * net.wrec_mask
+            loss += 0.001*torch.norm(w_rec_eff, p=2)/np.sqrt(torch.numel(w_rec_eff)) + 0.001*torch.norm(h, p=2)/np.sqrt(torch.numel(h))
+            ##################################
+
             losses.append(loss.item())
             all_losses.append(loss.item())
             loss.backward()
 
 
-
-            ######################## Tian changed the mask_gradients 
-            if mask_gradients:
-                # net.m.grad = net.m.grad * net.m_mask
-                # net.n.grad = net.n.grad * net.n_mask
-                net.wrec.grad = net.wrec.grad * net.wrec_mask
-                net.wi.grad = net.wi.grad * net.wi_mask
-                net.wo.grad = net.wo.grad * net.wo_mask
-                # net.unitn.grad = net.unitn.grad * net.unitn_mask
-                # net.unitm.grad = net.unitm.grad * net.unitm_mask
-                # net.unitwi.grad = net.unitwi.grad * net.unitwi_mask
-            ################################
 
             if clip_gradient is not None:
                 torch.nn.utils.clip_grad_norm_(net.parameters(), clip_gradient)
@@ -129,6 +145,10 @@ def train(net, _input, _target, _mask, n_epochs, lr=1e-2, batch_size=32, plot_le
             output.detach_()
             if resample:
                 net.resample_basis()
+
+            # print("batch %d:  loss=%.3f  (took %.2f s) *" % (i, loss, time.time() - begin))
+
+
         if keep_best and np.mean(losses) < best_loss:
             best = net.clone()
             best_loss = np.mean(losses)
@@ -157,7 +177,7 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
     def __init__(self, input_size, hidden_size, output_size, noise_std, alpha=0.2, rho=1,
                  train_wi=False, train_wo=False, train_wrec=True, train_h0=False, train_si=True, train_so=True, wi_mask = None, wrec_mask = None, wo_mask = None,
                  wi_init=None, wo_init=None, wrec_init=None, si_init=None, so_init=None, b_init=None,
-                 add_biases=False, non_linearity=torch.tanh, output_non_linearity=torch.tanh):
+                 add_biases=False, non_linearity=torch.relu, output_non_linearity=torch.tanh):
         """
         :param input_size: int
         :param hidden_size: int
@@ -289,7 +309,7 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
         self.wi_full = (self.wi.t() * self.si).t()
         self.wo_full = self.wo * self.so
 
-    def forward(self, input, return_dynamics=False, initial_states=None):
+    def forward(self, input, return_dynamics=True, initial_states=None):
         """
         :param input: tensor of shape (batch_size, #timesteps, input_dimension)
         Important: the 3 dimensions need to be present, even if they are of size 1.
@@ -315,11 +335,21 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
         for i in range(seq_len):
 
 
-            self.wrec = self.wrec
+            # self.wrec = self.wrec
+            # h = h + self.noise_std * noise[:, i, :] + self.alpha * \
+            #     (-h + r.matmul(self.wrec*self.wrec_mask) + input[:, i, :].matmul(self.wi_full*self.wi_mask))
+
+
+            self.wrec = nn.Parameter(torch.abs(self.wrec) * self.wrec_mask)
+
             h = h + self.noise_std * noise[:, i, :] + self.alpha * \
-                (-h + r.matmul(self.wrec.t()*self.wrec_mask) + input[:, i, :].matmul(self.wi_full*self.wi_mask))
+                (-h + r.matmul(self.wrec) + input[:, i, :].matmul(self.wi_full*self.wi_mask))
+
+
+
             r = self.non_linearity(h + self.b)
-            output[:, i, :] = self.output_non_linearity(h) @ (self.wo_full*self.wo_mask)
+            # output[:, i, :] = self.output_non_linearity(h) @ (self.wo_full*self.wo_mask)
+            output[:, i, :] = h @ (self.wo_full*self.wo_mask)
 
             if return_dynamics:
                 trajectories[:, i + 1, :] = h
@@ -371,7 +401,7 @@ class FullRankRNNScaled(nn.Module):
         self.train_wo = train_wo
         self.train_wrec = train_wrec
         self.train_h0 = train_h0
-        self.non_linearity = torch.tanh
+        self.non_linearity = torch.relu
 
         # Define parameters
         self.wi = nn.Parameter(torch.Tensor(input_size, hidden_size))
@@ -473,7 +503,7 @@ class LowRankRNN(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, noise_std, alpha, rank=1, train_m = True,
                  train_wi=False, train_wo=False, train_wrec=True, train_h0=False, train_si=True, train_so=True, wi_mask = None, wo_mask = None,
                  wi_init=None, wo_init=None, m_init=None, n_init=None, si_init=None, so_init=None, h0_init=None,
-                 add_biases=False, non_linearity=torch.tanh, output_non_linearity=torch.tanh):
+                 add_biases=False, non_linearity=torch.relu, output_non_linearity=torch.tanh):
         """
         :param input_size: int
         :param hidden_size: int
@@ -636,7 +666,9 @@ class LowRankRNN(nn.Module):
                 (-h + r.matmul(self.n).matmul(self.m.t()) / self.hidden_size +
                     input[:, i, :].matmul(self.wi_full*self.wi_mask))
             r = self.non_linearity(h + self.b)
-            output[:, i, :] = self.output_non_linearity(h) @ (self.wo_full*self.wo_mask) / self.hidden_size
+            # output[:, i, :] = self.output_non_linearity(h) @ (self.wo_full*self.wo_mask) / self.hidden_size
+            output[:, i, :] = h @ (self.wo_full*self.wo_mask) / self.hidden_size
+
             if return_dynamics:
                 trajectories[:, i + 1, :] = h
 
@@ -720,7 +752,7 @@ class SupportLowRankRNN(nn.Module):
         self.rank = rank
         self.n_supports = n_supports
         self.gaussian_basis_dim = 2 * rank + input_size if gaussian_basis_dim is None else gaussian_basis_dim
-        self.non_linearity = torch.tanh
+        self.non_linearity = torch.relu
 
         self.gaussian_basis = nn.Parameter(torch.randn((self.gaussian_basis_dim, hidden_size)), requires_grad=False)
         self.supports = nn.Parameter(torch.zeros((n_supports, hidden_size)), requires_grad=False)
@@ -1101,7 +1133,7 @@ class OptimizedLowRankRNN(nn.Module):
         self.train_h0 = train_h0
         self.train_si = train_si
         self.train_so = train_so
-        self.non_linearity = torch.tanh
+        self.non_linearity = torch.relu
 
         # Define parameters
         self.wi = nn.Parameter(torch.Tensor(input_size, hidden_size))
