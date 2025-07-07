@@ -348,17 +348,28 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
 
             self.wrec = nn.Parameter(torch.abs(self.wrec) * self.wrec_mask)
 
-            h = h + self.noise_std * noise[:, i, :] + self.alpha * \
-                (-h + r.matmul(self.wrec) + self.b + input[:, i, :].matmul(self.wi_full*self.wi_mask))
+            # h = h + self.noise_std * noise[:, i, :] + self.alpha * \
+            #     (-h + r.matmul(self.wrec)  + input[:, i, :].matmul(self.wi_full*self.wi_mask))
+
+            # r = self.non_linearity(h+ self.b)
 
 
 
-            r = self.non_linearity(h)
+            h = (1 - self.alpha) * h + self.alpha*self.non_linearity(r.matmul(self.wrec) + self.b + input[:, i, :].matmul(self.wi_full*self.wi_mask))
+
+            r = h + self.noise_std * noise[:, i, :]   # add some noise
+
+
+
+
+
+
+
             # output[:, i, :] = self.output_non_linearity(h) @ (self.wo_full*self.wo_mask)
-            output[:, i, :] = h @ (self.wo_full*self.wo_mask)
+            output[:, i, :] = r @ (self.wo_full*self.wo_mask)
 
             if return_dynamics:
-                trajectories[:, i + 1, :] = h
+                trajectories[:, i + 1, :] = r
 
         if not return_dynamics:
             return output

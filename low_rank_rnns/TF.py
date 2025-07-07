@@ -105,7 +105,15 @@ def generate_checker_data(num_trials, coherences=None, std=std_default, fraction
 
                 targets[i, response_begin:] = hi if coh_color > 0 else lo
 
-        mask[i, response_begin:, 0] = 1
+        # mask[i, response_begin:, 0] = 1
+
+
+
+        ################### Tian changed this
+        mask[i, :, 0] = 1
+
+
+
 
     # Split
     split_at = num_trials - int(num_trials * fraction_validation_trials)
