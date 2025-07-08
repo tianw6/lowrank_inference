@@ -16,8 +16,8 @@ def loss_mse(output, target, mask):
     # Compute loss for each (trial, timestep) (average accross output dimensions)
 
     ############################## Tian changed this
-    # loss_tensor = (mask * (target - output)).pow(2).mean(dim=-1)
-    loss_tensor = ((target - output)).pow(2).mean(dim=-1)
+    loss_tensor = (mask * (target - output)).pow(2).mean(dim=-1)
+    # loss_tensor = ((target - output)).pow(2).mean(dim=-1)
     ##############################
 
 
@@ -113,18 +113,13 @@ def train(net, _input, _target, _mask, n_epochs, lr=1e-2, batch_size=32, plot_le
             else:
                 output, h = net(batch)
 
-
-
-
-
             loss = loss_mse(output, target[random_batch_idx], mask[random_batch_idx])
             
 
             ################################## Tian changed this
             # add L2 regularization 
             w_rec_eff = torch.abs(net.wrec) * net.wrec_mask
-            loss += 0.001*torch.norm(w_rec_eff, p=1)/torch.numel(w_rec_eff) + 0.001*torch.norm(h, p=1)/torch.numel(h) + \
-                    0.001*torch.norm(w_rec_eff, p=2)/np.sqrt(torch.numel(w_rec_eff)) + 0.001*torch.norm(h, p=2)/np.sqrt(torch.numel(h))
+            loss += 0.001*torch.norm(w_rec_eff, p=2)/np.sqrt(torch.numel(w_rec_eff)) + 0.001*torch.norm(h, p=2)/np.sqrt(torch.numel(h))
             ##################################
 
             losses.append(loss.item())
@@ -134,7 +129,7 @@ def train(net, _input, _target, _mask, n_epochs, lr=1e-2, batch_size=32, plot_le
 
 
             if clip_gradient is not None:
-                torch.nn.utils.clip_grad_norm_(net.parameters(),  max_norm=clip_gradient, error_if_nonfinite=False)
+                torch.nn.utils.clip_grad_norm_(net.parameters(), clip_gradient)
             if plot_gradient:
                 tot = 0
                 for param in [p for p in net.parameters() if p.requires_grad]:
@@ -249,7 +244,7 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
         # Initialize parameters
         with torch.no_grad():
             if wi_init is None:
-                self.wi.normal_()
+                self.wi.normal_(std=rho / sqrt(hidden_size))
             else:
                 self.wi.copy_(wi_init)
             if si_init is None:
@@ -263,12 +258,7 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
             if b_init is None:
                 self.b.zero_()
             else:
-
-                ############################## Tian Changed this
-                # self.b.copy_(b_init)
-                torch.nn.init.normal_(self.b, mean=0, std=np.sqrt(1/hidden_size))
-                ##############################
-
+                self.b.copy_(b_init)
             if wo_init is None:
                 self.wo.normal_(std=1 / hidden_size)
 
@@ -315,6 +305,23 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
         self.wi_full = (self.wi.t() * self.si).t()
         self.wo_full = self.wo * self.so
 
+
+
+    def effective_weight(self, w, mask, w_fix=0):
+        """ compute the effective weight """
+    
+        w_eff = torch.abs(w) * mask + w_fix
+        return w_eff
+
+    def effective_IO_weight(self, w, mask):
+        
+        w_eff = w*mask
+
+        return w_eff   
+
+
+
+
     def forward(self, input, return_dynamics=True, initial_states=None):
         """
         :param input: tensor of shape (batch_size, #timesteps, input_dimension)
@@ -346,30 +353,37 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
             #     (-h + r.matmul(self.wrec*self.wrec_mask) + input[:, i, :].matmul(self.wi_full*self.wi_mask))
 
 
-            self.wrec = nn.Parameter(torch.abs(self.wrec) * self.wrec_mask)
+
+
+            # compute effective weight
+            self.w_rec_eff = self.effective_weight(w=self.wrec, mask=self.wrec_mask)
+            self.w_in_eff = self.effective_IO_weight(w=self.wi_full, mask=self.wi_mask)
+            self.w_out_eff = self.effective_IO_weight(w=self.wo_full, mask=self.wo_mask)
+
+            h = h + self.noise_std * noise[:, i, :] + self.alpha * \
+                (-h + r.matmul(self.w_rec_eff) + self.b + input[:, i, :].matmul(self.w_in_eff))
+
+            r = self.non_linearity(h)
+            output[:, i, :] = r @ (self.w_out_eff)     
+
+
+
+            # self.wrec = nn.Parameter(torch.abs(self.wrec) * self.wrec_mask)
 
             # h = h + self.noise_std * noise[:, i, :] + self.alpha * \
-            #     (-h + r.matmul(self.wrec)  + input[:, i, :].matmul(self.wi_full*self.wi_mask))
+            #     (-h + r.matmul(self.wrec) + self.b + input[:, i, :].matmul(self.wi_full*self.wi_mask))
 
-            # r = self.non_linearity(h+ self.b)
-
-
-
-            h = (1 - self.alpha) * h + self.alpha*self.non_linearity(r.matmul(self.wrec) + self.b + input[:, i, :].matmul(self.wi_full*self.wi_mask))
-
-            r = h + self.noise_std * noise[:, i, :]   # add some noise
+            # r = self.non_linearity(h)
+            # # output[:, i, :] = self.output_non_linearity(h) @ (self.wo_full*self.wo_mask)
+            # output[:, i, :] = r @ (self.wo_full*self.wo_mask)
 
 
 
 
 
-
-
-            # output[:, i, :] = self.output_non_linearity(h) @ (self.wo_full*self.wo_mask)
-            output[:, i, :] = r @ (self.wo_full*self.wo_mask)
 
             if return_dynamics:
-                trajectories[:, i + 1, :] = r
+                trajectories[:, i + 1, :] = h
 
         if not return_dynamics:
             return output

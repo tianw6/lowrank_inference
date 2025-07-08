@@ -16,8 +16,8 @@ def loss_mse(output, target, mask):
     # Compute loss for each (trial, timestep) (average accross output dimensions)
 
     ############################## Tian changed this
-    # loss_tensor = (mask * (target - output)).pow(2).mean(dim=-1)
-    loss_tensor = ((target - output)).pow(2).mean(dim=-1)
+    loss_tensor = (mask * (target - output)).pow(2).mean(dim=-1)
+    # loss_tensor = ((target - output)).pow(2).mean(dim=-1)
     ##############################
 
 
@@ -122,8 +122,8 @@ def train(net, _input, _target, _mask, n_epochs, lr=1e-2, batch_size=32, plot_le
 
             ################################## Tian changed this
             # add L2 regularization 
-            w_rec_eff = torch.abs(net.wrec) * net.wrec_mask
-            loss += 0.001*torch.norm(w_rec_eff, p=2)/np.sqrt(torch.numel(w_rec_eff)) + 0.001*torch.norm(h, p=2)/np.sqrt(torch.numel(h))
+            # w_rec_eff = torch.abs(net.wrec) * net.wrec_mask
+            # loss += 0.002*torch.norm(w_rec_eff, p=2)/np.sqrt(torch.numel(w_rec_eff)) + 0.002*torch.norm(h, p=2)/np.sqrt(torch.numel(h))
             ##################################
 
             losses.append(loss.item())
@@ -146,7 +146,7 @@ def train(net, _input, _target, _mask, n_epochs, lr=1e-2, batch_size=32, plot_le
             if resample:
                 net.resample_basis()
 
-            # print("batch %d:  loss=%.3f  (took %.2f s) *" % (i, loss, time.time() - begin))
+            print("batch %d:  loss=%.3f  (took %.2f s) *" % (i, loss, time.time() - begin))
 
 
         if keep_best and np.mean(losses) < best_loss:
@@ -343,13 +343,13 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
             self.wrec = nn.Parameter(torch.abs(self.wrec) * self.wrec_mask)
 
             h = h + self.noise_std * noise[:, i, :] + self.alpha * \
-                (-h + r.matmul(self.wrec) + input[:, i, :].matmul(self.wi_full*self.wi_mask))
+                (-h + r.matmul(self.wrec) + self.b + input[:, i, :].matmul(self.wi_full*self.wi_mask))
 
 
 
-            r = self.non_linearity(h + self.b)
+            r = self.non_linearity(h)
             # output[:, i, :] = self.output_non_linearity(h) @ (self.wo_full*self.wo_mask)
-            output[:, i, :] = h @ (self.wo_full*self.wo_mask)
+            output[:, i, :] = r @ (self.wo_full*self.wo_mask)
 
 
 
