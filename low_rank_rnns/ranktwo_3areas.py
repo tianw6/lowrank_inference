@@ -28,7 +28,7 @@ def fixedpoint_task(x0, m, n, hidden_size, I, nojac):
     return root(F, x0, args=I, jac=None if nojac else FJac)
 
 
-def plot_field(net, vec1=None, vec2=None, xmin=-3, xmax=3, ymin=-3, ymax=3, input=None, res=50,
+def plot_field(net, area, vec1=None, vec2=None, xmin=-3, xmax=3, ymin=-3, ymax=3, input=None, res=50,
                ax=None, add_fixed_points=False, fixed_points_trials=10, fp_save=None, fp_load=None, nojac=False,
                orth=False, sizes=1.):
     """
@@ -57,14 +57,16 @@ def plot_field(net, vec1=None, vec2=None, xmin=-3, xmax=3, ymin=-3, ymax=3, inpu
         fig, ax = plt.subplots()
     adjust_plot(ax, xmin, xmax, ymin, ymax)
     if vec1 is None:
-        vec1 = net.m[:, 0].squeeze().detach().numpy()
+        vec1 = net.m[area, 0].squeeze().detach().numpy()
     if vec2 is None:
-        vec2 = net.m[:, 1].squeeze().detach().numpy()
+        vec2 = net.m[area, 1].squeeze().detach().numpy()
     if add_fixed_points:
-        n1 = net.n[:, 0].squeeze().detach().numpy()
-        n2 = net.n[:, 1].squeeze().detach().numpy()
+        n1 = net.n[area, 0].squeeze().detach().numpy()
+        n2 = net.n[area, 1].squeeze().detach().numpy()
     m = net.m.detach().numpy()
     n = net.n.detach().numpy()
+    m = m[area,:]
+    n = n[area,:]
 
     # Plotting constants
     nx, ny = res, res
@@ -83,8 +85,8 @@ def plot_field(net, vec1=None, vec2=None, xmin=-3, xmax=3, ymin=-3, ymax=3, inpu
     # rescaling factors (for transformation euclidean space / overlap space)
     # here, if one wants x s.t. overlap(x, vec1) = alpha, x should be r1 * alpha * vec1
     # with the overlap being defined as overlap(u, v) = u.dot(v) / sqrt(hidden_size)
-    r1 = net.hidden_size / (vec1 @ vec1)
-    r2 = net.hidden_size / (vec2 @ vec2)
+    r1 = area.shape[0] / (vec1 @ vec1)
+    r2 = area.shape[0] / (vec2 @ vec2)
 
     # Defining the grid
     xs_grid = np.linspace(xmin, xmax, nx + 1)
@@ -96,7 +98,7 @@ def plot_field(net, vec1=None, vec2=None, xmin=-3, xmax=3, ymin=-3, ymax=3, inpu
 
     # Recurrent function of dx/dt = F(x, I)
     def F(x, I):
-        return -x + m @ (n.T @ np.maximum(x,0)) / net.hidden_size + I
+        return -x + m @ (n.T @ np.maximum(x,0)) / area.shape[0] + I
 
     # Compute flow in each point of the grid
     for i, x in enumerate(xs):
@@ -109,6 +111,8 @@ def plot_field(net, vec1=None, vec2=None, xmin=-3, xmax=3, ymin=-3, ymax=3, inpu
                   linewidth=sizes*.8)
     norm_field = np.sqrt(field[:, :, 0] ** 2 + field[:, :, 1] ** 2)
     mappable = ax.pcolor(X, Y, norm_field)
+
+
 
     # Look for fixed points
     if add_fixed_points:
@@ -166,6 +170,10 @@ def plot_field(net, vec1=None, vec2=None, xmin=-3, xmax=3, ymin=-3, ymax=3, inpu
             ax.scatter([x[0] for x in sources], [x[1] for x in sources], facecolors='black', edgecolors='white',
                        s=marker_size, zorder=1000)
     return ax, mappable
+
+
+
+
 
 
 def plot_trajectories(net, inputs, vec1=None, vec2=None, ax=None, labels=None, **plot_kws):
