@@ -616,7 +616,7 @@ class LowRankRNN(nn.Module):
 
 
             r = self.non_linearity(h)
-            output[:, i, :] = h @ (self.w_out_eff) / self.hidden_size
+            output[:, i, :] = r @ (self.w_out_eff) / self.hidden_size
 
             if return_dynamics:
                 trajectories[:, i + 1, :] = h

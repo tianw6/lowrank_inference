@@ -76,7 +76,6 @@ def train(net, _input, _target, _mask, n_epochs, lr=1e-2, batch_size=32, plot_le
     else:
         device = torch.device('cpu')
 
-    device = torch.device('cpu')
     
 
     net.to(device=device)
@@ -225,7 +224,9 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
             self.wi.requires_grad = False
         if not train_si:
             self.si.requires_grad = False
+
         self.wrec = nn.Parameter(torch.Tensor(hidden_size, hidden_size))
+
         if not train_wrec:
             self.wrec.requires_grad = False
         self.b = nn.Parameter(torch.Tensor(hidden_size))
@@ -462,7 +463,8 @@ class LowRankRNN(nn.Module):
         self.output_non_linearity = output_non_linearity
 
 
-        self.w_rec_eff = w_rec_eff
+        self.w_rec_eff = nn.Parameter(torch.Tensor(hidden_size, hidden_size), requires_grad=False)
+
 
         self.wrec_mask = nn.Parameter(torch.Tensor(hidden_size, hidden_size), requires_grad=False)
         self.wi_mask = nn.Parameter(torch.Tensor(input_size, hidden_size), requires_grad=False)
@@ -480,6 +482,8 @@ class LowRankRNN(nn.Module):
             self.wi.requires_grad = False
         if not train_si:
             self.si.requires_grad = False
+
+
         self.m = nn.Parameter(torch.Tensor(int(hidden_size/3), rank))
         self.n = nn.Parameter(torch.Tensor(int(hidden_size/3), rank))
 
@@ -536,6 +540,7 @@ class LowRankRNN(nn.Module):
             else:
                 self.h0.copy_(h0_init)
 
+            self.w_rec_eff.copy_(w_rec_eff)
 
 
             ############### define masks
@@ -566,12 +571,13 @@ class LowRankRNN(nn.Module):
 
 
 
-    def effective_weight(self, n, m, mask, w_rec_eff, w_fix=0):
+    def effective_weight(self, n, m, w_rec_eff, w_fix=0):
         """ compute the effective weight """
     
         w_eff = w_fix + w_rec_eff
 
         w_eff[:100,:100] = n.matmul(m.t()) 
+
 
         return w_eff
 
@@ -609,14 +615,14 @@ class LowRankRNN(nn.Module):
 
 
             # compute effective weight
-            self.w_rec_eff = self.effective_weight(n=self.n, m = self.m, w_rec_eff = self.w_rec_eff, mask=self.wrec_mask)
+            self.w_rec = self.effective_weight(n=self.n, m = self.m, w_rec_eff = self.w_rec_eff)
             self.w_in_eff = self.effective_IO_weight(w=self.wi_full, mask=self.wi_mask)
             self.w_out_eff = self.effective_IO_weight(w=self.wo_full, mask=self.wo_mask)
 
 
 
             h = h + self.noise_std * noise[:, i, :] + self.alpha * \
-                (-h + r.matmul(self.w_rec_eff) / self.hidden_size +
+                (-h + r.matmul(self.w_rec) +
                     input[:, i, :].matmul(self.w_in_eff) + self.b)
 
             # h = h + self.noise_std * noise[:, i, :] + self.alpha * \
@@ -628,8 +634,8 @@ class LowRankRNN(nn.Module):
             r = self.non_linearity(h)
 
             ################# Tian removed the average
-            # output[:, i, :] = h @ (self.w_out_eff) / self.hidden_size
-            output[:, i, :] = h @ (self.w_out_eff)
+            output[:, i, :] = r @ (self.w_out_eff) / self.hidden_size
+            # output[:, i, :] = h @ (self.w_out_eff)
 
             if return_dynamics:
                 trajectories[:, i + 1, :] = h
