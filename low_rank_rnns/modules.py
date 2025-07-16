@@ -122,7 +122,7 @@ def train(net, _input, _target, _mask, n_epochs, lr=1e-2, batch_size=32, plot_le
             output.detach_()
             if resample:
                 net.resample_basis()
-            print("batch %d:  loss=%.3f  (took %.2f s) *" % (i, loss, time.time() - begin))
+            # print("batch %d:  loss=%.3f  (took %.2f s) *" % (i, loss, time.time() - begin))
 
 
 
@@ -154,7 +154,7 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
     def __init__(self, input_size, hidden_size, output_size, noise_std, alpha=0.2, rho=1,
                  train_wi=False, train_wo=False, train_wrec=True, train_h0=False, train_si=True, train_so=True,
                  wi_init=None, wo_init=None, wrec_init=None, si_init=None, so_init=None, b_init=None,
-                 add_biases=False, non_linearity=torch.tanh, output_non_linearity=torch.tanh):
+                 add_biases=False, non_linearity=torch.relu, output_non_linearity=torch.relu):
         """
         :param input_size: int
         :param hidden_size: int
@@ -276,7 +276,13 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
             h = h + self.noise_std * noise[:, i, :] + self.alpha * \
                 (-h + r.matmul(self.wrec.t()) + input[:, i, :].matmul(self.wi_full))
             r = self.non_linearity(h + self.b)
-            output[:, i, :] = self.output_non_linearity(h) @ self.wo_full
+
+
+            ################## Tian changed this
+            # output[:, i, :] = self.output_non_linearity(h) @ self.wo_full
+            output[:, i, :] = r @ self.wo_full
+            ##################
+
 
             if return_dynamics:
                 trajectories[:, i + 1, :] = h
@@ -430,7 +436,7 @@ class LowRankRNN(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, noise_std, alpha, rank=1, train_m = True,
                  train_wi=False, train_wo=False, train_wrec=True, train_h0=False, train_si=True, train_so=True,
                  wi_init=None, wo_init=None, m_init=None, n_init=None, si_init=None, so_init=None, h0_init=None,
-                 add_biases=False, non_linearity=torch.tanh, output_non_linearity=torch.tanh):
+                 add_biases=False, non_linearity=torch.relu, output_non_linearity=torch.relu):
         """
         :param input_size: int
         :param hidden_size: int
@@ -569,7 +575,14 @@ class LowRankRNN(nn.Module):
                 (-h + r.matmul(self.n).matmul(self.m.t()) / self.hidden_size +
                     input[:, i, :].matmul(self.wi_full))
             r = self.non_linearity(h + self.b)
-            output[:, i, :] = self.output_non_linearity(h) @ self.wo_full / self.hidden_size
+
+
+            #################### Tian changed this
+            # output[:, i, :] = self.output_non_linearity(h) @ self.wo_full / self.hidden_size
+            output[:, i, :] = r @ self.wo_full / self.hidden_size
+            ####################
+
+
             if return_dynamics:
                 trajectories[:, i + 1, :] = h
 
