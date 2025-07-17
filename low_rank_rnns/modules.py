@@ -218,7 +218,11 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
         # Initialize parameters
         with torch.no_grad():
             if wi_init is None:
+
                 self.wi.normal_()
+
+
+
             else:
                 self.wi.copy_(wi_init)
             if si_init is None:
