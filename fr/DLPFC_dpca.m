@@ -30,7 +30,7 @@
 %    firingRatesAverage = bsxfun(@times, mean(firingRates,5), size(firingRates,5)./trialNum)
 
 
-clear all; close all; 
+clear all; clc
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%% path of all dpca core code %%%%%%%
@@ -50,7 +50,9 @@ addpath("~/code/dPCA/matlab");
 % fr = load('4AreasArea12All.mat').firingRatesAverage;
 
 % fr = load('4Areas3to1.mat').firingRatesAverage;
-fr = load('4AreasArea12All3to1.mat').firingRatesAverage;
+% fr = load('4AreasArea12All3to1.mat').firingRatesAverage;
+
+fr = load('4AreasA5_0.mat').firingRatesAverage;
 
 %% Define parameter grouping
 
@@ -120,7 +122,7 @@ dpca_perMarginalization(firingRatesAverage, @dpca_plot_default, ...
 % whichMarg is an array that tells you which component comes from which
 % marginalization
 
-firingRatesAverage = fr(301:400,:,:,:);
+firingRatesAverage = fr(101:200,:,:,:);
 
 
 tic
