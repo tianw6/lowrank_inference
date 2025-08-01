@@ -52,7 +52,7 @@ addpath("~/code/dPCA/matlab");
 % fr = load('4Areas3to1.mat').firingRatesAverage;
 % fr = load('4AreasArea12All3to1.mat').firingRatesAverage;
 
-fr = load('4AreasA5_0.mat').firingRatesAverage;
+fr = load('4AreasA5_6.mat').firingRatesAverage;
 
 %% Define parameter grouping
 
@@ -122,7 +122,7 @@ dpca_perMarginalization(firingRatesAverage, @dpca_plot_default, ...
 % whichMarg is an array that tells you which component comes from which
 % marginalization
 
-firingRatesAverage = fr(101:200,:,:,:);
+firingRatesAverage = fr(1:100,:,:,:);
 
 
 tic

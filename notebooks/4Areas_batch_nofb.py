@@ -24,7 +24,7 @@ input_size = 3
 output_size = 1
 
 
-for i in range(0,10):
+for i in range(10,20):
 
 	x_train, y_train, mask_train, cohAll_train, x_val, y_val, mask_val, cohAll_val = TF.generate_checker_data(10000)
 
@@ -71,22 +71,8 @@ for i in range(0,10):
 
 
 
-	def create_area_conn1(ratio, rows, cols): 
-	    
-	    # Create a zero matrix
-	    matrix = torch.zeros(rows, cols)
-	    
-	    # Calculate the number of entries to set to 1
-	    num_entries = int(ratio * rows * cols)
-	    
-	    # Randomly select indices
-	    indices = torch.randperm(rows * cols)[:num_entries]
-	    
-	    # Set the selected entries to 1
-	    matrix.view(-1)[indices] = 1
-    
 
-	    return matrix
+
 
 
 	n_neurons = 400
@@ -105,31 +91,28 @@ for i in range(0,10):
 	mask_rec[300:400,300:400] = create_local_conn(20,0.2,100)
 
 
-	connStrength = 0.0417
+	connStrength = 0.125
 
 	# area2 to 1 feedback
-	mask_rec[:100,100:200] = create_area_conn(20,connStrength,100)
+	# mask_rec[:100,100:200] = create_area_conn(20,connStrength,100)
 
 
 	# area1 to 2 feedforward
-	# mask_rec[100:200,0:100] = create_area_conn(20,connStrength,100)
-	# mask_rec[100:200,0:40] = 0
-	mask_rec[100:180,40:80] = create_area_conn1(connStrength, 80,40)
+	mask_rec[100:200,0:100] = create_area_conn(20,connStrength,100)
+	mask_rec[100:200,0:40] = 0
 
 
 	# area3to 2 feedback
-	mask_rec[100:200,200:300] = create_area_conn(20,connStrength,100)
+	# mask_rec[100:200,200:300] = create_area_conn(20,connStrength,100)
 
 
 	# area2 to 3 feedforward
-	# mask_rec[200:300,100:200] = create_area_conn(20,connStrength,100)
-	# mask_rec[200:300,100:140] = 0
-	mask_rec[200:280,140:180] = create_area_conn1(connStrength,80,40)
-
+	mask_rec[200:300,100:200] = create_area_conn(20,connStrength,100)
+	mask_rec[200:300,100:140] = 0
 
 
 	# area3 to 4 feedback
-	mask_rec[200:300,300:400] = create_area_conn(20,connStrength,100)
+	# mask_rec[200:300,300:400] = create_area_conn(20,connStrength,100)
 
 
 	# area3 to 4 feedforward
@@ -137,7 +120,7 @@ for i in range(0,10):
 
 
 	# area3 to 1 feedback
-	mask_rec[0:100,200:300] = create_area_conn(20,connStrength,100)
+	# mask_rec[0:100,200:300] = create_area_conn(20,connStrength,100)
 
 
 
@@ -159,21 +142,12 @@ for i in range(0,10):
 
 
 
+
 	wi_mask = mask_in
 	wo_mask = mask_out
 	wrec_mask = mask_rec.t()
 	print(torch.sum(wrec_mask))
 
-
-	# temp3 = torch.normal(0,1 / sqrt(size),size = (400,400))
-	# wrec_init = (np.abs(temp3)*wrec_mask) 
-
-	# print(torch.sum(wrec_init))
-
-
-	# net = FullRankRNN(3, size, 1, noise_std, alpha, train_wi=True, train_wo = True, train_h0=True, 
-	#                   wrec_mask = wrec_mask, wi_mask = wi_mask, wo_mask = wo_mask, wrec_init = wrec_init,
-	#                  b_init = None, add_biases = False)
 
 	net = FullRankRNN(3, size, 1, noise_std, alpha, train_wi=True, train_wo = True, train_h0=True, 
 	                  wrec_mask = wrec_mask, wi_mask = wi_mask, wo_mask = wo_mask, 
@@ -235,6 +209,4 @@ for i in range(0,10):
 
 	if acc > 0.9: 
 		mdic = {"firingRatesAverage": firingRatesAverage}
-		savemat(f'../fr/4AreasA5_{i}.mat', mdic)
-		# save the model
-		torch.save(net.state_dict(), f'../models/4AreasA5_{i}.pt')		
+		savemat(f'../fr/4AreasA5nofb_{i}.mat', mdic)

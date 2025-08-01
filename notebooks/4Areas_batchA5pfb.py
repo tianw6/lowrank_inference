@@ -24,7 +24,7 @@ input_size = 3
 output_size = 1
 
 
-for i in range(0,10):
+for i in range(10,15):
 
 	x_train, y_train, mask_train, cohAll_train, x_val, y_val, mask_val, cohAll_val = TF.generate_checker_data(10000)
 
@@ -71,6 +71,8 @@ for i in range(0,10):
 
 
 
+
+
 	def create_area_conn1(ratio, rows, cols): 
 	    
 	    # Create a zero matrix
@@ -84,9 +86,10 @@ for i in range(0,10):
 	    
 	    # Set the selected entries to 1
 	    matrix.view(-1)[indices] = 1
-    
+	    
 
 	    return matrix
+
 
 
 	n_neurons = 400
@@ -105,7 +108,7 @@ for i in range(0,10):
 	mask_rec[300:400,300:400] = create_local_conn(20,0.2,100)
 
 
-	connStrength = 0.0417
+	connStrength = 0.05
 
 	# area2 to 1 feedback
 	mask_rec[:100,100:200] = create_area_conn(20,connStrength,100)
@@ -137,7 +140,7 @@ for i in range(0,10):
 
 
 	# area3 to 1 feedback
-	mask_rec[0:100,200:300] = create_area_conn(20,connStrength,100)
+	# mask_rec[0:100,200:300] = create_area_conn(20,connStrength,100)
 
 
 
@@ -159,25 +162,27 @@ for i in range(0,10):
 
 
 
+
+
+
 	wi_mask = mask_in
 	wo_mask = mask_out
 	wrec_mask = mask_rec.t()
 	print(torch.sum(wrec_mask))
 
-
 	# temp3 = torch.normal(0,1 / sqrt(size),size = (400,400))
-	# wrec_init = (np.abs(temp3)*wrec_mask) 
-
-	# print(torch.sum(wrec_init))
-
+	# wrec_init = (np.abs(temp3)*wrec_mask)
 
 	# net = FullRankRNN(3, size, 1, noise_std, alpha, train_wi=True, train_wo = True, train_h0=True, 
 	#                   wrec_mask = wrec_mask, wi_mask = wi_mask, wo_mask = wo_mask, wrec_init = wrec_init,
 	#                  b_init = None, add_biases = False)
 
 	net = FullRankRNN(3, size, 1, noise_std, alpha, train_wi=True, train_wo = True, train_h0=True, 
-	                  wrec_mask = wrec_mask, wi_mask = wi_mask, wo_mask = wo_mask, 
+	                  wrec_mask = wrec_mask, wi_mask = wi_mask, wo_mask = wo_mask,
 	                 b_init = None, add_biases = False)
+
+
+
 
 	# after trained, recurrent connectivity are all zero
 	# after trained, bias term will make test accuracy very low
@@ -235,6 +240,4 @@ for i in range(0,10):
 
 	if acc > 0.9: 
 		mdic = {"firingRatesAverage": firingRatesAverage}
-		savemat(f'../fr/4AreasA5_{i}.mat', mdic)
-		# save the model
-		torch.save(net.state_dict(), f'../models/4AreasA5_{i}.pt')		
+		savemat(f'../fr/4AreasA5pfb_{i}.mat', mdic)

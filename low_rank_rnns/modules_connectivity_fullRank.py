@@ -252,8 +252,11 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
                 self.si.copy_(si_init)
             if wrec_init is None:
                 self.wrec.normal_(std=rho / sqrt(hidden_size))
+                print(torch.sum(self.wrec))
+
             else:
                 self.wrec.copy_(wrec_init)
+
             if b_init is None:
                 self.b.zero_()
             else:

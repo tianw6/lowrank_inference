@@ -1,0 +1,122 @@
+
+clear all; clc
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%% path of all dpca core code %%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+addpath("~/code/dPCA/matlab");
+
+
+
+varPerRun = [];
+cnt = 1;
+
+folder = dir('~/Downloads/fr/4AreasA5_*.mat');
+% folder = dir('4AreasA5_*.mat');
+% folder = [folder; folder1];
+
+for ii = 1:length(folder)
+    
+    % fr = load('4Area4.mat').firingRatesAverage;
+    
+    % fr = load('4AreaSeparate.mat').firingRatesAverage;
+    
+    % fr = load('4AreasArea2All.mat').firingRatesAverage;
+    
+    
+    % fr = load('4AreasArea12All.mat').firingRatesAverage;
+    
+    % fr = load('4Areas3to1.mat').firingRatesAverage;
+    % fr = load('4AreasArea12All3to1.mat').firingRatesAverage;
+    
+    fr = load([folder(ii).folder '/' folder(ii).name]).firingRatesAverage;
+    
+    %% Define parameter grouping
+    
+    % *** Don't change this if you don't know what you are doing! ***
+    % firingRates array has [N S D T E] size; herewe ignore the 1st dimension
+    % (neurons), i.e. we have the following parameters:
+    %    1 - stimulus
+    %    2 - decision
+    %    3 - time
+    % There are three pairwise interactions:
+    %    [1 3] - stimulus/time interaction
+    %    [2 3] - decision/time interaction
+    %    [1 2] - stimulus/decision interaction
+    % And one three-way interaction:
+    %    [1 2 3] - rest
+    % As explained in the eLife paper, we group stimulus with stimulus/time interaction etc.:
+    
+    combinedParams = {{1, [1 3]}, {2, [2 3]}, {3}, {[1 2], [1 2 3]}};
+    margNames = {'Stimulus', 'Decision', 'Condition-independent', 'S/D Interaction'};
+    
+    % margNames = {'SC', 'Configuration', 'Condition-independent', 'C/D Interaction'};
+    
+    margColours = [23 100 171; 187 20 25; 150 150 150; 114 97 171]/256;
+    
+    
+    % time of combined T and C data
+    time = linspace(1, size(fr, 4), size(fr, 4));
+    timeEvents = [10, 100];
+    
+    
+    %% Step 3: dPCA without regularization and ignoring noise covariance
+    
+    % This is the core function.
+    % W is the decoder, V is the encoder (ordered by explained variance),
+    % whichMarg is an array that tells you which component comes from which
+    % marginalization
+    
+    
+    for jj = 1:4
+        whichN = (jj-1)*100+1:jj*100;
+        firingRatesAverage = fr(whichN,:,:,:);
+        
+        
+        tic
+        [W,V,whichMarg] = dpca(firingRatesAverage, 30, ...
+            'combinedParams', combinedParams);
+        toc
+        
+        explVar = dpca_explainedVariance(firingRatesAverage, W, V, ...
+            'combinedParams', combinedParams);
+        
+        % z = dpca_plot(firingRatesAverage, W, V, @dpca_plot_default, ...
+        %     'explainedVar', explVar, ...
+        %     'marginalizationNames', margNames, ...
+        %     'marginalizationColours', margColours, ...
+        %     'whichMarg', whichMarg,                 ...
+        %     'time', time,                        ...
+        %     'timeEvents', timeEvents,               ...
+        %     'timeMarginalization', 3, ...
+        %     'legendSubplot', 16, ...
+        %     'numCompToShow', 20);
+        %
+        % % print('-painters','-depsc',['~/Desktop/', 'pmdDpca','.eps'], '-r300');
+        % % savefig(['~/Documents/MATLAB/ChandLab/DLPFC_analysis/resultFigures/DLPFC_dpca/', 'dpca_A','.fig']);
+        % drawnow
+        
+        varPerRun(cnt,jj,:) = explVar.totalMarginalizedVar./sum(explVar.totalMarginalizedVar);
+    end
+    cnt = cnt + 1;
+end
+
+%%
+
+% hold on;
+
+% ksdensity(varPerRun(:,1,2));
+
+
+figure; hold on
+cols = {'r','g','b','m'};
+for j=1:4
+    plot(varPerRun(:,j,4), varPerRun(:,j,2), 'o','color',cols{j});
+    hold on
+end
+
+
+axis equal
+
+xlim([-0.1 0.7])
+ylim([0 0.7])
