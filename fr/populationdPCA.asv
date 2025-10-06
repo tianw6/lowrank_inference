@@ -12,8 +12,8 @@ varPerRun = [];
 cnt = 1;
 
 folder = dir('~/Downloads/fr/4AreasA1_*.mat');
-% folder = dir('4AreasA5_*.mat');
-% folder = [folder; folder1];
+
+folder = folder(1:30);
 
 for ii = 1:length(folder)
     
@@ -103,19 +103,65 @@ end
 
 %%
 
-hold on;
+% hold on;
 
-ksdn
+% ksdensity(varPerRun(:,1,2));
 
-% figure; hold on
-% cols = {'r','g','b','m'};
-% for j=1:4
-%     plot(varPerRun(:,j,4), varPerRun(:,j,2), 'o','color',cols{j});
-%     hold on
-% end
-% 
-% 
-% axis equal
-% 
-% xlim([-0.1 0.7])
+
+figure; hold on
+cols = {'r','g','b','m'};
+for j=1:4
+    plot(varPerRun(:,j,4), varPerRun(:,j,2), 'o','color',cols{j});
+    hold on
+end
+
+
+axis equal
+
+xlim([0 0.7])
+ylim([0 0.7])
+
+xlabel('cxt')
+ylabel('choice')
+
+figure; hold on
+cols = {'r','g','b','m'};
+for j=1:4
+    plot(varPerRun(:,j,1), varPerRun(:,j,4), 'o','color',cols{j});
+    hold on
+end
+
+
+axis equal
+
+xlim([0 0.7])
+ylim([0 0.7])
+
+xlabel('color')
+ylabel('cxt')
+%% 
+
+
+
+figure;
+cols = {'r','g','b','m'};
+for j=1:4
+    plot3(varPerRun(:,j,1), varPerRun(:,j,4), varPerRun(:,j,2), 'o','color',cols{j});
+    hold on
+end
+
+
+axis equal
+
+% xlim([0 0.7])
 % ylim([0 0.7])
+% zlim([0 0.7])
+
+xlabel('color')
+ylabel('cxt')
+zlabel('choice')
+
+
+%%
+
+save('~/Downloads/fr/resultsA5pfb.mat');

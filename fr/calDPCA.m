@@ -1,0 +1,105 @@
+
+clear all; clc
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%% path of all dpca core code %%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+addpath("~/code/dPCA/matlab");
+
+
+
+varPerRun = [];
+cnt = 1;
+
+folder = dir('~/Downloads/fr/4AreasA3_*.mat');
+
+folder = folder(1:30);
+
+dpcaV = struct;
+
+%%
+for ii = 1:length(folder)
+
+    fr_raw = load([folder(ii).folder '/' folder(ii).name]).firingRatesAverage;
+    fr = [];
+    for kk = 1:size(fr_raw,1)
+        temp = squeeze(fr_raw(kk,:,:,:));
+        normFactor = prctile(temp(:),99)';
+        temp = temp./sqrt(normFactor);
+        fr(kk,:,:,:) = temp;
+    end
+    
+%     fr = load([folder(ii).folder '/' folder(ii).name]).firingRatesAverage;
+    
+    %% Define parameter grouping
+   
+    % *** Don't change this if you don't know what you are doing! ***
+    % firingRates array has [N S D T E] size; herewe ignore the 1st dimension
+    % (neurons), i.e. we have the following parameters:
+    %    1 - stimulus
+    %    2 - decision
+    %    3 - time
+    % There are three pairwise interactions:
+    %    [1 3] - stimulus/time interaction
+    %    [2 3] - decision/time interaction
+    %    [1 2] - stimulus/decision interaction
+    % And one three-way interaction:
+    %    [1 2 3] - rest
+    % As explained in the eLife paper, we group stimulus with stimulus/time interaction etc.:
+    
+    combinedParams = {{1, [1 3]}, {2, [2 3]}, {3}, {[1 2], [1 2 3]}};
+    margNames = {'Stimulus', 'Decision', 'Condition-independent', 'S/D Interaction'};
+    
+    % margNames = {'SC', 'Configuration', 'Condition-independent', 'C/D Interaction'};
+    
+    margColours = [23 100 171; 187 20 25; 150 150 150; 114 97 171]/256;
+    
+    
+    % time of combined T and C data
+    time = linspace(1, size(fr, 4), size(fr, 4));
+    timeEvents = [10, 100];
+    
+    
+    %% Step 3: dPCA without regularization and ignoring noise covariance
+    
+    % This is the core function.
+    % W is the decoder, V is the encoder (ordered by explained variance),
+    % whichMarg is an array that tells you which component comes from which
+    % marginalization
+    
+    
+    firingRatesAverage = fr;
+
+
+    tic
+    [W,V,whichMarg] = dpca(firingRatesAverage, 30, ...
+        'combinedParams', combinedParams);
+    toc
+
+    explVar = dpca_explainedVariance(firingRatesAverage, W, V, ...
+        'combinedParams', combinedParams);
+% 
+%         z = dpca_plot(firingRatesAverage, W, V, @dpca_plot_default, ...
+%             'explainedVar', explVar, ...
+%             'marginalizationNames', margNames, ...
+%             'marginalizationColours', margColours, ...
+%             'whichMarg', whichMarg,                 ...
+%             'time', time,                        ...
+%             'timeEvents', timeEvents,               ...
+%             'timeMarginalization', 3, ...
+%             'legendSubplot', 16, ...
+%             'numCompToShow', 20);
+%         
+%         % print('-painters','-depsc',['~/Desktop/', 'pmdDpca','.eps'], '-r300');
+%         % savefig(['~/Documents/MATLAB/ChandLab/DLPFC_analysis/resultFigures/DLPFC_dpca/', 'dpca_A','.fig']);
+%         drawnow
+
+
+    dpcaV(ii).V = V;
+    dpcaV(ii).whichMarg = whichMarg;
+
+end
+
+%%
+
+save('~/Downloads/fr/A3V.mat', 'dpcaV');

@@ -11,9 +11,9 @@ addpath("~/code/dPCA/matlab");
 varPerRun = [];
 cnt = 1;
 
-folder = dir('~/Downloads/fr/4AreasA5_*.mat');
-% folder = dir('4AreasA5_*.mat');
-% folder = [folder; folder1];
+folder = dir('~/Downloads/fr/4AreasA5nofb_*.mat');
+
+folder = folder(1:30);
 
 for ii = 1:length(folder)
     
@@ -81,20 +81,20 @@ for ii = 1:length(folder)
         explVar = dpca_explainedVariance(firingRatesAverage, W, V, ...
             'combinedParams', combinedParams);
         
-        % z = dpca_plot(firingRatesAverage, W, V, @dpca_plot_default, ...
-        %     'explainedVar', explVar, ...
-        %     'marginalizationNames', margNames, ...
-        %     'marginalizationColours', margColours, ...
-        %     'whichMarg', whichMarg,                 ...
-        %     'time', time,                        ...
-        %     'timeEvents', timeEvents,               ...
-        %     'timeMarginalization', 3, ...
-        %     'legendSubplot', 16, ...
-        %     'numCompToShow', 20);
-        %
-        % % print('-painters','-depsc',['~/Desktop/', 'pmdDpca','.eps'], '-r300');
-        % % savefig(['~/Documents/MATLAB/ChandLab/DLPFC_analysis/resultFigures/DLPFC_dpca/', 'dpca_A','.fig']);
-        % drawnow
+        z = dpca_plot(firingRatesAverage, W, V, @dpca_plot_default, ...
+            'explainedVar', explVar, ...
+            'marginalizationNames', margNames, ...
+            'marginalizationColours', margColours, ...
+            'whichMarg', whichMarg,                 ...
+            'time', time,                        ...
+            'timeEvents', timeEvents,               ...
+            'timeMarginalization', 3, ...
+            'legendSubplot', 16, ...
+            'numCompToShow', 20);
+        
+        % print('-painters','-depsc',['~/Desktop/', 'pmdDpca','.eps'], '-r300');
+        % savefig(['~/Documents/MATLAB/ChandLab/DLPFC_analysis/resultFigures/DLPFC_dpca/', 'dpca_A','.fig']);
+        drawnow
         
         varPerRun(cnt,jj,:) = explVar.totalMarginalizedVar./sum(explVar.totalMarginalizedVar);
     end
@@ -118,5 +118,50 @@ end
 
 axis equal
 
-xlim([-0.1 0.7])
+xlim([0 0.7])
 ylim([0 0.7])
+
+xlabel('cxt')
+ylabel('choice')
+
+figure; hold on
+cols = {'r','g','b','m'};
+for j=1:4
+    plot(varPerRun(:,j,1), varPerRun(:,j,4), 'o','color',cols{j});
+    hold on
+end
+
+
+axis equal
+
+xlim([0 0.7])
+ylim([0 0.7])
+
+xlabel('color')
+ylabel('cxt')
+%% 
+
+
+
+figure;
+cols = {'r','g','b','m'};
+for j=1:4
+    plot3(varPerRun(:,j,1), varPerRun(:,j,4), varPerRun(:,j,2), 'o','color',cols{j});
+    hold on
+end
+
+
+axis equal
+
+% xlim([0 0.7])
+% ylim([0 0.7])
+% zlim([0 0.7])
+
+xlabel('color')
+ylabel('cxt')
+zlabel('choice')
+
+
+%%
+
+% save('~/Downloads/fr/resultsA3.mat');

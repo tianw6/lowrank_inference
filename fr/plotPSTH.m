@@ -1,9 +1,9 @@
 clear; close all; clc
 
-fr = load('4AreasA5_9.mat').firingRatesAverage;
+fr = load('~/Downloads/fr/4AreasA5_5.mat').firingRatesAverage;
 
 
-for ii = 40:60
+for ii = 40:50
 
     figure; hold on
     plot(squeeze(fr(ii,1,1,:)), 'r-');
@@ -16,7 +16,7 @@ end
 %% 
 
 
-for ii = 160:180
+for ii = 160:170
 
     figure; hold on
     
