@@ -11,7 +11,7 @@ addpath("~/code/dPCA/matlab");
 varPerRun = [];
 cnt = 1;
 
-folder = dir('~/Downloads/fr/4AreasA3_*.mat');
+folder = dir('~/Downloads/fr/4AreasA6_*.mat');
 
 folder = folder(1:30);
 
@@ -102,4 +102,4 @@ end
 
 %%
 
-save('~/Downloads/fr/A3V.mat', 'dpcaV');
+save('~/Downloads/fr/A6V.mat', 'dpcaV');

@@ -11,14 +11,14 @@ addpath("~/code/dPCA/matlab");
 varPerRun = [];
 cnt = 1;
 
-folder = dir('~/Downloads/fr/4AreasA3_*.mat');
+folder = dir('~/Downloads/fr/4AreasA6_*.mat');
 
 folder = folder(1:30);
 
 dpcaV = struct;
 
 %%
-for ii = 1:length(folde r)
+for ii = 1:length(folder)
 
     fr_raw = load([folder(ii).folder '/' folder(ii).name]).firingRatesAverage;
     fr = [];
@@ -102,4 +102,4 @@ end
 
 %%
 
-save('~/Downloads/fr/A3V.mat', 'dpcaV');
+save('~/Downloads/fr/A6V.mat', 'dpcaV');
