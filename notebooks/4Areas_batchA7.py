@@ -30,63 +30,62 @@ for i in range(0,60):
 
 
 
+	# def create_area_conn1(ratio, rows, cols): 
+	    
+	#     # Create a zero matrix
+	#     matrix = torch.zeros(rows, cols)
+	    
+	#     # Calculate the number of entries to set to 1
+	#     num_entries = int(ratio * rows * cols)
+	    
+	#     # Randomly select indices
+	#     indices = torch.randperm(rows * cols)[:num_entries]
+	    
+	#     # Set the selected entries to 1
+	#     matrix.view(-1)[indices] = 1
+    
+
+	#     return matrix
+
 	# local connections are continuous 
 	def create_local_conn(Inum, ratio, n_neurons):
 
-	    mask_rec = torch.zeros(n_neurons, n_neurons)
-	    
-	    mask_rec[:,n_neurons-Inum:] = -1
-	    
-	    mask_rec[:,:n_neurons-Inum] = ratio    
+		mask_rec = torch.zeros(n_neurons, n_neurons)
+		
+		mask_rec[:,n_neurons-Inum:] = -1
+		
+		mask_rec[:,:n_neurons-Inum] = ratio    
 
-	    return mask_rec
+		return mask_rec
 
 
 
 	def create_area_conn(Inum, ratio, n_neurons): 
-	    mask_rec = torch.zeros(n_neurons, n_neurons)
-	    
-	    mask_rec[:,n_neurons-Inum:] = 0
-	    mask_rec[n_neurons-Inum:,:] = 0
-	    
-	    # Define the size of the matrix
-	    rows, cols = n_neurons-Inum, n_neurons-Inum
-	    
-	    # Create a zero matrix
-	    matrix = torch.zeros(rows, cols)
-	    
-	    # Calculate the number of entries to set to 1
-	    num_entries = int(ratio * rows * cols)
-	    
-	    # Randomly select indices
-	    indices = torch.randperm(rows * cols)[:num_entries]
-	    
-	    # Set the selected entries to 1
-	    matrix.view(-1)[indices] = 1
-	    
-	    mask_rec[:n_neurons-Inum,:n_neurons-Inum] = matrix
+		mask_rec = torch.zeros(n_neurons, n_neurons)
+		
+		mask_rec[:,n_neurons-Inum:] = 0
+		mask_rec[n_neurons-Inum:,:] = 0
+		
+		# Define the size of the matrix
+		rows, cols = n_neurons-Inum, n_neurons-Inum
+		
+		# Create a zero matrix
+		matrix = torch.zeros(rows, cols)
+		
+		# Calculate the number of entries to set to 1
+		num_entries = int(ratio * rows * cols)
+		
+		# Randomly select indices
+		indices = torch.randperm(rows * cols)[:num_entries]
+		
+		# Set the selected entries to 1
+		matrix.view(-1)[indices] = 1
+		
+		mask_rec[:n_neurons-Inum,:n_neurons-Inum] = matrix
 
-	    return mask_rec
-
-
+		return mask_rec
 
 
-	def create_area_conn1(ratio, rows, cols): 
-	    
-	    # Create a zero matrix
-	    matrix = torch.zeros(rows, cols)
-	    
-	    # Calculate the number of entries to set to 1
-	    num_entries = int(ratio * rows * cols)
-	    
-	    # Randomly select indices
-	    indices = torch.randperm(rows * cols)[:num_entries]
-	    
-	    # Set the selected entries to 1
-	    matrix.view(-1)[indices] = 1
-    
-
-	    return matrix
 
 
 	n_neurons = 400
@@ -105,28 +104,26 @@ for i in range(0,60):
 	mask_rec[300:400,300:400] = create_local_conn(20,0.2,100)
 
 
-	connStrength = 0.0385
+	connStrength = 0.0314
 
 	# area2 to 1 feedback
 	mask_rec[:100,100:200] = create_area_conn(20,connStrength,100)
 
 
 	# area1 to 2 feedforward
-	# mask_rec[100:200,0:100] = create_area_conn(20,connStrength,100)
-	# mask_rec[100:200,0:40] = 0
-	mask_rec[100:180,40:80] = create_area_conn1(connStrength, 80,40)
+	mask_rec[100:200,0:100] = create_area_conn(20,connStrength,100)
 
-	# area 1 to 3 feedforward
-	mask_rec[200:280,40:80] = create_area_conn1(connStrength, 80,40)
+	# area 1 to 3 feedforward 
+	mask_rec[200:300,0:100] = create_area_conn(20,connStrength,100)
+
 
 	# area3to 2 feedback
 	mask_rec[100:200,200:300] = create_area_conn(20,connStrength,100)
 
 
 	# area2 to 3 feedforward
-	# mask_rec[200:300,100:200] = create_area_conn(20,connStrength,100)
+	mask_rec[200:300,100:200] = create_area_conn(20,connStrength,100)
 	# mask_rec[200:300,100:140] = 0
-	mask_rec[200:280,140:180] = create_area_conn1(connStrength,80,40)
 
 
 
@@ -144,15 +141,12 @@ for i in range(0,60):
 
 
 
+	mask_in[0,:40] = 1
+	mask_in[1:,:10] = 1
 
-	mask_in[0,:20] = 1
-	mask_in[1:,10:30] = 1
 
-
-	mask_in[0,100:120] = 1
-	mask_in[1:,110:130] = 1
-
-	# mask_in[:,:80] = 1
+	mask_in[0,100:110] = 1
+	mask_in[1:,100:140] = 1
 
 
 	mask_out[:300,:] = 0
@@ -167,18 +161,10 @@ for i in range(0,60):
 
 
 	wrec_mask = mask_rec.t()
+
+
 	print(torch.sum(wrec_mask))
 
-
-	# temp3 = torch.normal(0,1 / sqrt(size),size = (400,400))
-	# wrec_init = (np.abs(temp3)*wrec_mask) 
-
-	# print(torch.sum(wrec_init))
-
-
-	# net = FullRankRNN(3, size, 1, noise_std, alpha, train_wi=True, train_wo = True, train_h0=True, 
-	#                   wrec_mask = wrec_mask, wi_mask = wi_mask, wo_mask = wo_mask, wrec_init = wrec_init,
-	#                  b_init = None, add_biases = False)
 
 	net = FullRankRNN(3, size, 1, noise_std, alpha, train_wi=True, train_wo = True, train_h0=True, 
 	                  wrec_mask = wrec_mask, wi_mask = wi_mask, wo_mask = wo_mask, 
@@ -240,6 +226,9 @@ for i in range(0,60):
 
 	if acc > 0.9: 
 		mdic = {"firingRatesAverage": firingRatesAverage}
-		savemat(f'../fr/new/4AreasA7_{i}.mat', mdic)
+		savemat(f'../fr/new4/4AreasA7_{i}.mat', mdic)
 		# save the model
-		torch.save(net.state_dict(), f'../models/new/4AreasA7_{i}.pt')		
+		torch.save(net.state_dict(), f'../models/new4/4AreasA7_{i}.pt')		
+
+
+
