@@ -277,8 +277,6 @@ class FullRankRNN(nn.Module):  # TODO rename biases train_biases, add to cloning
             ############### define masks
             if wrec_mask is not None:
                 self.wrec_mask.copy_(wrec_mask)
-                temp = torch.normal(0,1,size = (hidden_size,hidden_size))
-                # self.wrec.copy_(temp*wrec_mask)
 
             else:
                 self.wrec_mask.set_(torch.ones_like(self.wrec_mask))
